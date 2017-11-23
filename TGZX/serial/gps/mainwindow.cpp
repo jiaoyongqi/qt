@@ -33,70 +33,118 @@ void MainWindow::SerialCom1ProcessSlot()
         if(!ba.isEmpty())
         {
             int aa=ba.length();
-            if(aa==92)
+            // aa = 83
+            //printf("aa = %d\n",aa);
+            if(aa==83)
             {
+#if 1
+                QString rData(ba);
+                printf("need del data ba = %s\n",rData.toStdString().data());
+
                 int cc=0;
                 for (int i=4;i<aa-4;i++)
                     cc+=(int)(ba.at(i)&0x000000ff);
                 if((cc&0x000000ff)==(int)(ba.at(aa-4)&0x000000ff))   //校验正确，并且数据帧长度正确
                 {
                     //串口状态
-                    cCom1Count=0;
+                    int cCom1Count=0;
 
                     //执行状态
-                    PubApi::uRun=(int)(ba.at(4)&0x03);
+                    //PubApi::uRun=(int)(ba.at(4)&0x03);
+                    int uRun = (int)(ba.at(4)&0x03);
+                    printf("uRun=%d \n",uRun);
 
-                    //雷达注册
+                    //毫米波雷达注册
                     if((int)(ba.at(4)&0x04)==0x04)
-                        PubApi::cRadarRegister=true;
-                    else
-                        PubApi::cRadarRegister=false;
-
-                    //雷达掉线
-                    if((int)(ba.at(4)&0x08)==0x08)
-                        PubApi::cRadarOffLine=true;
-                    else
-                        PubApi::cRadarOffLine=false;
-
-                    //GPS掉线
-                    if((int)(ba.at(4)&0x10)==0x10)
-                        PubApi::cGPSOffLine=true;
-                    else
-                        PubApi::cGPSOffLine=false;
-                    if((int)(ba.at(4)&0x20)==0x20)
-                        PubApi::Bat_volt_low=true;
-                    else
-                        PubApi::Bat_volt_low=false;
-
-                    //差分状态
-                    PubApi::gRTK="0"+QString::number(ba.at(5), 16).toUpper();
-
-                    //航向角
-                    PubApi::gHead=(double)(((ba.at(7)&0x000000ff)<<8)|(ba.at(6)&0x000000ff))/100;
-                    //纬度
-                    PubApi::gLat=(double)(((ba.at(11)&0x000000FF)<<24)|((ba.at(10)&0x000000FF)<<16)|((ba.at(9)&0x000000FF)<<8)|(ba.at(8)&0x000000FF))/10000000;
-                    //经度
-                    PubApi::gLng=(double)(((ba.at(15)&0x000000FF)<<24)|((ba.at(14)&0x000000FF)<<16)|((ba.at(13)&0x000000FF)<<8)|(ba.at(12)&0x000000FF))/10000000;
-                    //东向
-                    PubApi::gVe=(double)(((ba.at(17))<<8)|(ba.at(16)&0xFF))/1000;
-                    //北向
-                    PubApi::gVn=(double)(((ba.at(19))<<8)|(ba.at(18)&0xFF))/1000;
-                    //合速度
-                    PubApi::gVm_temp=qSqrt(PubApi::gVe*PubApi::gVe+PubApi::gVn*PubApi::gVn)*3.6;
-
-                    for(int j=0;j<8;j++)
                     {
-                        PubApi::radar_data[j].RADAR_R_Distance=(double)(((ba.at(20+j*6+1)&0x000000ff)<<8)|(ba.at(20+j*6)&0x000000FF))/100;
-                        PubApi::radar_data[j].RADAR_R_Lateral=(double)(((ba.at(20+j*6+3))<<8)|(ba.at(20+j*6+2)&0xFF))/100;
-                        PubApi::radar_data[j].RADAR_R_Speed=(double)(((ba.at(20+j*6+5))<<8)|(ba.at(20+j*6+4)&0xFF))/100;
+                        printf("mmw register is true\n");
+                        //PubApi::cRadarRegister=true;
+                        static volatile bool MmwRadarRegister=true;
+                    }
+                    else
+                    {
+                        printf("mmw register is false\n");
+                        //PubApi::cRadarRegister=false;
+                         static volatile bool MmwRadarRegister=false;
                     }
 
-                    PubApi::THR_MONI=(double)(ba.at(68)&0x000000FF)/100;
-                    PubApi::BRK_MONI=(double)(ba.at(69)&0x000000FF)/100;
+                    //毫米波雷达掉线
+                    if((int)(ba.at(4)&0x08)==0x08)
+                    {
+                         printf("mmw is status true\n");
+                        //PubApi::cRadarOffLine=true;
+                        static volatile bool MmwRadarOffLine=true;
+                    }
+                    else
+                    {
+                        printf("mmw is status false\n");
+                        //PubApi::cRadarOffLine=false;
+                        static volatile bool MmwRadarOffLine=false;
+                    }
+
+                    //电池电压状态
+                    if((int)(ba.at(4)&0x10)==0x10)
+                    {
+                        printf("volatile is status true\n");
+                        //PubApi::cGPSOffLine=true;
+                        static volatile bool Bat_volt_low=true;
+                    }
+                    else
+                    {
+                         printf("volatile is status false\n");
+                        //PubApi::cGPSOffLine=false;
+                        static volatile bool Bat_volt_low=false;
+                    }
+                    //超声波雷达掉线状态
+                    if((int)(ba.at(4)&0x20)==0x20)
+                    {
+                        printf("ult is status true\n");
+                        //PubApi::Bat_volt_low=true;
+                        static volatile bool UltrasonicradarOffLine = true;
+                    }
+                    else
+                    {
+                        printf("ult is status false\n");
+                        //PubApi::Bat_volt_low=false;
+                        static volatile bool UltrasonicradarOffLine = false;
+                    }
+
+                    //超声波雷达 Ultrasonic radar
+//                    for(int i=0;i<4;i++)
+//                    {
+//                        ult_radar_data[j].RADAR_R_Ultrasonic=
+
+//                    }
+
+
+                    //毫米波雷达数据
+                    for(int j=0;j<8;j++)
+                    {
+#if 0
+                        //毫米波雷达数据 ok
+                        PubApi::radar_data[j].RADAR_R_Distance=(double)(((ba.at(9+j*6+1)&0x000000ff)<<8)|(ba.at(9+j*6)&0x000000FF))/100;
+                        PubApi::radar_data[j].RADAR_R_Lateral=(double)(((ba.at(9+j*6+3))<<8)|(ba.at(9+j*6+2)&0xFF))/100;
+                        PubApi::radar_data[j].RADAR_R_Speed=(double)(((ba.at(9+j*6+5))<<8)|(ba.at(9+j*6+4)&0xFF))/100;
+#endif
+                        mmw_radar_data[j].RADAR_R_Distance=(double)(((ba.at(9+j*6+1)&0x000000ff)<<8)|(ba.at(9+j*6)&0x000000FF))/100;
+                        mmw_radar_data[j].RADAR_R_Lateral=(double)(((ba.at(9+j*6+3))<<8)|(ba.at(9+j*6+2)&0xFF))/100;
+                        mmw_radar_data[j].RADAR_R_Speed=(double)(((ba.at(9+j*6+5))<<8)|(ba.at(9+j*6+4)&0xFF))/100;
+
+                        printf("mmw_radar_data[%d].RADAR_R_Distanc = %lf,mmw_radar_data[%d].RADAR_R_Lateral=%lf,mmw_radar_data[%d].RADAR_R_Speed=%lf\n",j,mmw_radar_data[j].RADAR_R_Distance,j,mmw_radar_data[j].RADAR_R_Lateral,j,mmw_radar_data[j].RADAR_R_Speed);
+
+                    }
+
+//                    PubApi::THR_MONI=(double)(ba.at(68)&0x000000FF)/100;
+//                    PubApi::BRK_MONI=(double)(ba.at(69)&0x000000FF)/100;
+                      static volatile double THR_MONI=(double)(ba.at(57)&0x000000FF)/100;
+                      static volatile double BRK_MONI=(double)(ba.at(58)&0x000000FF)/100;
+                      printf("THR = %lf,BRK = %lf\n",THR_MONI,BRK_MONI);
 
                     //刷新Com1数据显示
-                    Com1DataDisplay();
+                    //Com1DataDisplay();
+
                 }
+                 #endif
             }
         }
         //移除数据
@@ -111,10 +159,11 @@ void MainWindow::SerialComRevSlot(QByteArray RxData)
     qCom1Byte.append(RxData);
     if(!qCom1Byte.isEmpty())
     {
-        QByteArray find("\xFA\xFB\xFC",3);
+        QByteArray find("\xFD\xFE\xFF",3);
         int idx = 0,from = find.length();
-        while(idx = qCom1Byte.indexOf(find,from) != -1)
+        while((idx = qCom1Byte.indexOf(find,from)) != -1)
         {
+            //printf("idx = %d\n",idx);
             cCom1Items.append(qCom1Byte.mid(0,idx+3));
             emit SerialCom1ProcessSignal();
             if(qCom1Byte.length()-idx-3>=0)

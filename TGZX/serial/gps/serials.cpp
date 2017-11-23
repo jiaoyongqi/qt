@@ -108,7 +108,7 @@ void Serials::SerialWrite(QByteArray TxData)
 {
     if(isOpened==true)
     {
-        printf("write %s\n",TxData.data());
+        //printf("write %s\n",TxData.data());
         //往串口写数据
         serial->write(TxData);
     }

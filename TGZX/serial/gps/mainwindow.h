@@ -8,6 +8,24 @@ namespace Ui {
 class MainWindow;
 }
 
+
+typedef struct _UltrasonicRadarInfo
+{
+  double RADAR_R_Ultrasonic ;     //超声波雷达数据
+}UltrasonicRadarInfo;
+
+
+typedef struct _MmwRadarInfo
+{
+  double RADAR_R_Distance;     //前车与本车的相对距离，单位m
+  double RADAR_R_Lateral;      //前车与本车的横向距离，单位m，左侧为负
+  double RADAR_R_Speed;        //前车与本车的相对速度，单位m/s
+}MmwRadarInfo;
+
+static volatile UltrasonicRadarInfo ult_radar_data[4];
+static volatile MmwRadarInfo mmw_radar_data[8];
+
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
