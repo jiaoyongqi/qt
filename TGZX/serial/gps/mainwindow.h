@@ -18,7 +18,11 @@ public:
 
 //    Serials  sCom1;
     QString qComData;
+    //串口1接收的数据
+    QByteArray qCom1Byte;
     QList<QString> cComItems;
+    //COM1集合
+    QList<QByteArray> cCom1Items;
 private:
     Ui::MainWindow *ui;
     QList<QString> cComData;//数据集合
@@ -30,8 +34,10 @@ private:
 private slots:
     void SerialComRevSlot(QByteArray RxData);
     void SerialComProcessSlot();
+    void SerialCom1ProcessSlot();
 signals:
     void SerialComProcessSignal();
+    void SerialCom1ProcessSignal();
 };
 
 #endif // MAINWINDOW_H

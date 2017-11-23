@@ -23,7 +23,111 @@ QString MainWindow::outputcheck(QString s)
     return ss;
 }
 
+/**
+ * @brief MainWindow::SerialCom1ProcessSlot--串口1处理数据的槽
+ */
+void MainWindow::SerialCom1ProcessSlot()
+{
+    foreach(QByteArray ba, cCom1Items)
+    {
+        if(!ba.isEmpty())
+        {
+            int aa=ba.length();
+            if(aa==92)
+            {
+                int cc=0;
+                for (int i=4;i<aa-4;i++)
+                    cc+=(int)(ba.at(i)&0x000000ff);
+                if((cc&0x000000ff)==(int)(ba.at(aa-4)&0x000000ff))   //校验正确，并且数据帧长度正确
+                {
+                    //串口状态
+                    cCom1Count=0;
+
+                    //执行状态
+                    PubApi::uRun=(int)(ba.at(4)&0x03);
+
+                    //雷达注册
+                    if((int)(ba.at(4)&0x04)==0x04)
+                        PubApi::cRadarRegister=true;
+                    else
+                        PubApi::cRadarRegister=false;
+
+                    //雷达掉线
+                    if((int)(ba.at(4)&0x08)==0x08)
+                        PubApi::cRadarOffLine=true;
+                    else
+                        PubApi::cRadarOffLine=false;
+
+                    //GPS掉线
+                    if((int)(ba.at(4)&0x10)==0x10)
+                        PubApi::cGPSOffLine=true;
+                    else
+                        PubApi::cGPSOffLine=false;
+                    if((int)(ba.at(4)&0x20)==0x20)
+                        PubApi::Bat_volt_low=true;
+                    else
+                        PubApi::Bat_volt_low=false;
+
+                    //差分状态
+                    PubApi::gRTK="0"+QString::number(ba.at(5), 16).toUpper();
+
+                    //航向角
+                    PubApi::gHead=(double)(((ba.at(7)&0x000000ff)<<8)|(ba.at(6)&0x000000ff))/100;
+                    //纬度
+                    PubApi::gLat=(double)(((ba.at(11)&0x000000FF)<<24)|((ba.at(10)&0x000000FF)<<16)|((ba.at(9)&0x000000FF)<<8)|(ba.at(8)&0x000000FF))/10000000;
+                    //经度
+                    PubApi::gLng=(double)(((ba.at(15)&0x000000FF)<<24)|((ba.at(14)&0x000000FF)<<16)|((ba.at(13)&0x000000FF)<<8)|(ba.at(12)&0x000000FF))/10000000;
+                    //东向
+                    PubApi::gVe=(double)(((ba.at(17))<<8)|(ba.at(16)&0xFF))/1000;
+                    //北向
+                    PubApi::gVn=(double)(((ba.at(19))<<8)|(ba.at(18)&0xFF))/1000;
+                    //合速度
+                    PubApi::gVm_temp=qSqrt(PubApi::gVe*PubApi::gVe+PubApi::gVn*PubApi::gVn)*3.6;
+
+                    for(int j=0;j<8;j++)
+                    {
+                        PubApi::radar_data[j].RADAR_R_Distance=(double)(((ba.at(20+j*6+1)&0x000000ff)<<8)|(ba.at(20+j*6)&0x000000FF))/100;
+                        PubApi::radar_data[j].RADAR_R_Lateral=(double)(((ba.at(20+j*6+3))<<8)|(ba.at(20+j*6+2)&0xFF))/100;
+                        PubApi::radar_data[j].RADAR_R_Speed=(double)(((ba.at(20+j*6+5))<<8)|(ba.at(20+j*6+4)&0xFF))/100;
+                    }
+
+                    PubApi::THR_MONI=(double)(ba.at(68)&0x000000FF)/100;
+                    PubApi::BRK_MONI=(double)(ba.at(69)&0x000000FF)/100;
+
+                    //刷新Com1数据显示
+                    Com1DataDisplay();
+                }
+            }
+        }
+        //移除数据
+        cCom1Items.removeFirst();
+    }
+}
+
+
+//deal
 void MainWindow::SerialComRevSlot(QByteArray RxData)
+{
+    qCom1Byte.append(RxData);
+    if(!qCom1Byte.isEmpty())
+    {
+        QByteArray find("\xFA\xFB\xFC",3);
+        int idx = 0,from = find.length();
+        while(idx = qCom1Byte.indexOf(find,from) != -1)
+        {
+            cCom1Items.append(qCom1Byte.mid(0,idx+3));
+            emit SerialCom1ProcessSignal();
+            if(qCom1Byte.length()-idx-3>=0)
+                 qCom1Byte=qCom1Byte.right(qCom1Byte.length()-idx-3);
+
+        }
+    }
+}
+
+
+#if 0
+//deal gps data
+void MainWindow::SerialComRevSlot1(QByteArray RxData)
 {
     QString rData(RxData);
     if(!rData.isEmpty())
@@ -34,7 +138,7 @@ void MainWindow::SerialComRevSlot(QByteArray RxData)
             printf("contains nnnnnnnnnnnn \n");
             QString str=qComData.split('\n').at(0);
             int ind=str.indexOf("$");
-//            printf("before del ind =%d str = %s\n",ind,str.data());
+//          printf("before del ind =%d str = %s\n",ind,str.data());
             int i;
             int result=0;
             bool ok;
@@ -67,6 +171,8 @@ void MainWindow::SerialComRevSlot(QByteArray RxData)
 
     }
 }
+
+#endif
 
 void MainWindow::SerialComProcessSlot()
 {
@@ -150,32 +256,31 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     //COM1="COM1,115200,0,0,0,0,0"
-    //for(int i = 0;i < 5;i++){
-        this->sCom.SerialOpen("/dev/ttyUSB1","115200",0,0,0,0,0);
-        if(this->sCom.isOpened==true)
-        {
-            printf("open successed\n");
-        }
-        else
-        {
-            printf("open failed\n");
-        }
+    this->sCom.SerialOpen("/dev/ttyUSB0","115200",0,0,0,0,0);
+    if(this->sCom.isOpened==true)
+    {
+        printf("open successed\n");
+    }
+    else
+    {
+        printf("open failed\n");
+    }
 
-        //QString sData="$GTIMU,0,13798.300,-0.1267,0.2201,-0.0631,0.3407,0.1559,0.9255,49.8*68\n";
-        //this->sCom.SerialWrite(sData.toLatin1());
-
-    //}
+    //QString sData="$GTIMU,0,13798.300,-0.1267,0.2201,-0.0631,0.3407,0.1559,0.9255,49.8*68\n";
+    //this->sCom.SerialWrite(sData.toLatin1());
 
 
+#if 0
+    // deal gps
     //COM1接收数据的槽
     QObject::connect(&this->sCom, SIGNAL(SerialRecive(QByteArray)), this, SLOT(SerialComRevSlot(QByteArray)));
     //COM1处理数据的槽
     QObject::connect(this, SIGNAL(SerialComProcessSignal()), this, SLOT(SerialComProcessSlot()));
-
-
-
-   //sCom1.SerialRead();
-    //QObject::connect(&this->sCom1, SIGNAL(SerialRecive(QByteArray)), this, SLOT(SerialCom1RevSlot(QByteArray)));
+#endif
+    //COM1接收数据的槽
+    QObject::connect(&this->sCom, SIGNAL(SerialRecive(QByteArray)), this, SLOT(SerialComRevSlot(QByteArray)));
+    //COM1处理数据的槽
+    QObject::connect(this, SIGNAL(SerialCom1ProcessSignal()), this, SLOT(SerialCom1ProcessSlot()));
 
 }
 
