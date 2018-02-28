@@ -64,8 +64,8 @@ private:
     //计数timer
     QTimer *cTimers;
     volatile int Li;
-    volatile int QLidarListStatus;
-    volatile int QLidarListCopyStatus;
+    volatile int LidarListStatus;
+    volatile int LidarListExtractStatus;
 
 };
 
