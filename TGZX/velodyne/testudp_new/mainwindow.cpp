@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-volatile int  MainWindow::savefile = 0;
+volatile int MainWindow::savefile = 0;
 volatile double MainWindow::Cosdu[16]={0.965925,
                                      0.999847,
                                      0.974370,
@@ -49,7 +49,7 @@ void MainWindow::NextcTimerSlot()
 {
     //qDebug("111111111");
     //提取激光雷达
-    ExtractLidarMsg(qLidarList);
+    ExtractLidarMsg();
 
 }
 
@@ -100,7 +100,23 @@ void MainWindow::ProcessLidarDataSlot()
                     int j = 0,k = 0;
                     short int ChannelDis_recv[16];
                     //数据归零
-                    if(Li>=1800) Li=0;
+                    if(Li>=1800)
+                    {
+                        QLidarListCopyStatus = 0;
+                        //当读取雷达数据链表qLidarList存满后把数据拷贝到链表qLidarList_extract
+                        for(j=0;j<1800;j++)
+                        {
+                            qLidarList_extract[j].Azimuth = qLidarList[j].Azimuth;
+                            for(k=0;k<16;k++)//通道距离
+                            {
+                                qLidarList_extract[j].ChannelDis[k] = qLidarList[j].ChannelDis[k];
+
+                            }
+                        }
+                        QLidarListStatus=1;//设置链表标志，1表示有数据
+                        QLidarListCopyStatus = 1;//设置链表拷贝标志，1,表示拷贝完成
+                        Li=0;
+                    }
 
                     QString qStr=qStrList.at(i);
                     QString qL,qH,qHL;
@@ -178,89 +194,29 @@ void MainWindow::ProcessLidarDataSlot()
     }
 }
 
-void MainWindow::ExtractLidarMsg(QList<LidarInfo> point_cloud)
+void MainWindow::ExtractLidarMsg()
 {
-     int i_lidar=0,j=0;
-     double x_lidar=0.0,y_lidar=0.0,z_lidar=0.0;
-     //qDebug("QlidarList.length=%d",qLidarList.length());//1800
-     cloud.width=1800*16;
-     cloud.height=1;
-     cloud.is_dense=false;
-     cloud.points.resize(cloud.width*cloud.height);
-     int k=0;
+    int i_lidar=0,j=0;
 
-       //if(velodyne::savefile == 20)
-       //{
-        for(i_lidar=0;i_lidar<1800;i_lidar++)//lianbiao
+    if(QLidarListStatus==1 && QLidarListCopyStatus==1){
+
+        for(i_lidar=0;i_lidar<1800;i_lidar++)
         {
-           //qDebug("Azimuth[%d]=%d",i_lidar,qLidarList.at(i_lidar).Azimuth);
-
             for(j=0;j<16;j++)//通道距离
             {
 
-                //qDebug("Azimuth[%d]=%d,channeldis[%d]=%d,ChannelRef[%d]=%d",i_lidar,qLidarList.at(i_lidar).Azimuth,j,qLidarList.at(i_lidar).ChannelDis[j],j,qLidarList.at(i_lidar).ChannelRef[j]);
-                //qDebug("channeldis=%lf,cos[%d]=%lf,sin=%lf",(double)qLidarList.at(i_lidar).ChannelDis[j]*2/1000,j,Cosdu[j],qSin(qLidarList.at(i_lidar).Azimuth/5729.5828)/1400);
-                x_lidar=(float)qLidarList.at(i_lidar).ChannelDis[j]*2*MainWindow::Cosdu[j]*qSin(qLidarList.at(i_lidar).Azimuth/5729.5828)/1000; //pai/180/100
-                y_lidar=(float)qLidarList.at(i_lidar).ChannelDis[j]*2*MainWindow::Cosdu[j]*qCos(qLidarList.at(i_lidar).Azimuth/5729.5828)/1000; //pai/180/100
-                z_lidar=(float)qLidarList.at(i_lidar).ChannelDis[j]*2*MainWindow::Sindu[j]/1000;
-                //qDebug("x=%lf,y=%lf,z=%lf",x_lidar,y_lidar,z_lidar);
-
-
-                cloud.points[k].x=x_lidar;
-                cloud.points[k].y=y_lidar;
-                cloud.points[k].z=z_lidar;
-                //qDebug("x=%lf,y=%lf,z=%lf",cloud.p    oints[k].x,cloud.points[k].y,cloud.points[k].z);
-                ++k;
-
             }
         }
-    // }
-    //}
 
-#if 1
-
-     if(MainWindow::savefile == 90)
-     {
-          qDebug("savefilenum=%d",MainWindow::savefile);
-          pcl::io::savePCDFileASCII("/home/feng/Documents/robot/testudp_new/test_pcd.pcd",cloud);
-          //std::cerr<<"Saved "<<cloud.points.size()<<" data points to test_pcd.pcd."<<std::endl;
-          //for(size_t i=0;i<cloud.points.size();++i)
-          // std::cerr<<"    "<<cloud.points[i].x<<" "<<cloud.points[i].y<<" "<<cloud.points[i].z<<std::endl;
-
-
-          pcl::PCDReader reader;
-          reader.read<pcl::PointXYZ> ("/home/feng/Documents/robot/testudp_new/test_pcd.pcd", *cloud1);
-
-          pcl::RadiusOutlierRemoval<pcl::PointXYZ>outrem;
-          outrem.setInputCloud (cloud1);
-          outrem.setRadiusSearch(0.2);
-          outrem.setMinNeighborsInRadius(5);
-          outrem.filter (*cloud_filtered);
-          std::cerr << "Cloud after filtering: " << std::endl;
-          std::cerr << *cloud_filtered << std::endl;
-          pcl::PCDWriter writer;
-          writer.write<pcl::PointXYZ> ("/home/feng/Documents/robot/testudp_new/table_scene_lms400_outliers.pcd", *cloud_filtered, false);
-
-          //下采样滤波
-          //VoxelGrid<pcl::pointxyz>
-          pcl::VoxelGrid<pcl::PointXYZ> sor2;
-          sor2.setInputCloud (cloud_filtered);
-          sor2.setLeafSize (0.1f, 0.1f, 0.1f);
-          sor2.filter (*cloud_filtered2);
-
-          writer.write<pcl::PointXYZ> ("/home/feng/Documents/robot/testudp_new/table_scene_lms400_downsampled.pcd", *cloud_filtered2, false);
-          std::cerr << "cloud filter end: " << std::endl;
-     }
-#endif
-
-
-     MainWindow::savefile++;
+    }
 
 }
 
 void MainWindow::InitLidar()
 {
     //初始化
+    QLidarListStatus = 0;
+    QLidarListCopyStatus = 0;
     qLidarSocket = new QUdpSocket(this);
     //采用ShareAddress模式(即允许其它的服务连接到相同的地址和端口，特别是
     //用在多客户端监听同一个服务器端口等时特别有效)，和ReuseAddressHint模式(重新连接服务器)

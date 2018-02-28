@@ -32,12 +32,14 @@ class MainWindow : public QMainWindow
 
 public:
     static volatile int savefile;
+
+
     static volatile double Cosdu[16];
     static volatile double Sindu[16];
     void InitLidar();
     void InitSlot();
     void InitTimer();
-    void ExtractLidarMsg(QList<LidarInfo> point_cloud);
+    void ExtractLidarMsg();
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
@@ -62,6 +64,8 @@ private:
     //计数timer
     QTimer *cTimers;
     volatile int Li;
+    volatile int QLidarListStatus;
+    volatile int QLidarListCopyStatus;
 
 };
 
