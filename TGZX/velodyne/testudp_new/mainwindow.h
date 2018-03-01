@@ -40,6 +40,7 @@ public:
     void InitSlot();
     void InitTimer();
     void ExtractLidarMsg();
+    void DealLidarArray(QByteArray LidarData);
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
@@ -55,6 +56,9 @@ signals:
 private:
     Ui::MainWindow *ui;
     //激光雷达数据
+    QByteArray qLidarByte;
+    QList<QByteArray> cLidarItems;
+
     QList<QByteArray> qLidarItems;//激光雷达集合
     QUdpSocket *qLidarSocket;
     QList<LidarInfo> qLidarList;
@@ -63,7 +67,7 @@ private:
 
     //计数timer
     QTimer *cTimers;
-    volatile int Li;
+    volatile int cAlculationTimes;
     volatile int LidarListStatus;
     volatile int LidarListExtractStatus;
 

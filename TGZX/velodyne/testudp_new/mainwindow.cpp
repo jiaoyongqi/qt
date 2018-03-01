@@ -62,21 +62,195 @@ void MainWindow::ReceiverLidarDataSlot()
 
          datagram.resize(qLidarSocket->pendingDatagramSize());
          qLidarSocket->readDatagram(datagram.data(), datagram.size());
-         qLidarItems.append(datagram.toHex());
+
+         //qDebug()<<datagram.data();
+         //qLidarItems.append(datagram.toHex());
+         qLidarItems.append(datagram);
          emit ProcessLidarData();
     }
 }
 
+void MainWindow::DealLidarArray(QByteArray LidarData)
+{
+
+        //qDebug("ba.length=%d",LidarData.length());
+
+
+        qLidarByte.append(LidarData);
+        QByteArray find("\xff\xee",2);
+
+        int idx = 0, from = find.length();
+
+        while((idx = qLidarByte.indexOf(find, from)) != -1)
+        {
+            cLidarItems.append(qLidarByte.mid(0, idx+2));
+
+            if(qLidarByte.length()-idx-2>=0)
+                qLidarByte=qLidarByte.right(qLidarByte.length()-idx-2);
+        }
+
+}
 
 void MainWindow::ProcessLidarDataSlot()
 {
 
+    int azimuths = 0;
+    int j=0,k=0,qL=0,qH=0,qHL=0;
+    int LidarArrayLength = 0;
+    short int ChannelDis_recv[16];
+    int LidarArrayIndex=0;
+
+    LidarInfo lidarN_1;//前半截数据
+    LidarInfo lidarN;//后半截数据
+
+
     //处理雷达数据
     foreach(QByteArray ba, qLidarItems)
     {
+
+        DealLidarArray(ba);
+
+        foreach(QByteArray LidarArray, cLidarItems)
+        {
+            if(!LidarArray.isEmpty())
+            {
+
+                for(int i = 0;i<LidarArray.length();i++)//100
+                {
+                    //qDebug("0x%02x ",LidarArray.at(i));
+                    LidarArrayLength = LidarArray.length();
+                    if(100 == LidarArrayLength)
+                    {
+
+                        /*
+                        qDebug("==============");
+                        qDebug("0x%x",LidarArray.at(0));
+                        //qDebug("%d",(uint8_t)LidarArray.at(0));
+                        qDebug("0x%x",LidarArray.at(1));
+                        qDebug("0x%x",LidarArray.at(2));
+                        qDebug("0x%x",LidarArray.at(3));
+
+                        qDebug("==============");
+                        */
+                        LidarArrayIndex = 0;
+                         //前半截数据
+                        qL = LidarArray.at(LidarArrayIndex)&0xFF;
+                        qH = LidarArray.at(LidarArrayIndex+1)&0xFF;
+                        //qDebug("qL=0x%x,qH=0x%x",qL,qH);
+                        qHL = (qH<<8)|(qL);
+                        azimuths = qHL;
+                        lidarN_1.Azimuth=(float)azimuths/5729.5828;//把方位角默认单位转换为弧度
+
+                        LidarArrayIndex = 2;
+                        memset(ChannelDis_recv,0,sizeof(short int)*16);
+                        for(int lj=0;lj<16;lj++)
+                        {
+                            qL=LidarArray.at(LidarArrayIndex)&0xFF;
+                            qH=LidarArray.at(LidarArrayIndex+1)&0xFF;
+                            qHL = (qH<<8)|(qL);
+                            ChannelDis_recv[lj]=qHL;
+                            LidarArrayIndex+=3;
+                        }
+
+                        //把雷达检测到的通道距离值，16根线从下到上依次存储
+                        for(j=0,k=0;j<16;++k,++j)
+                        {
+
+                            lidarN_1.ChannelDis[k]=(float)ChannelDis_recv[j]/1000;//通道距离默认单位为毫米，转换成米
+                            if(k+8 <16)
+                                lidarN_1.ChannelDis[k+8]=(float)ChannelDis_recv[++j]/1000;
+
+                        }
+
+                        //雷达状态为1时，表示qLidarList数据读取完成，使用qLidarList_extract读取数据
+                        //雷达状态为0时，表示qLidarList_extract数据读取完成，使用qLidarList读取数据
+                        if(LidarListStatus == 0)
+                        {
+                            qLidarList.replace(cAlculationTimes,lidarN_1);
+                        }
+                        else if(LidarListStatus == 1)
+                        {
+                            qLidarList_extract.replace(cAlculationTimes,lidarN_1);
+                        }
+                        cAlculationTimes++;
+
+                        //后半截数据
+                        lidarN.Azimuth=(float)(azimuths+20)/5729.5828;//把方位角默认单位转换为弧度
+                        memset(ChannelDis_recv,0,sizeof(short int)*16);
+                        for(int lk=0;lk<16;lk++)
+                        {
+                            //Channel data
+                            qL=LidarArray.at(LidarArrayIndex)&0xFF;
+                            qH=LidarArray.at(LidarArrayIndex+1)&0xFF;
+                            qHL = (qH<<8)|(qL);
+                            ChannelDis_recv[lk]=qHL;
+                            LidarArrayIndex+=3;
+                        }
+
+                        //把雷达检测到的通道距离值，16根线从下到上依次存储
+                        for(j=0,k=0;j<16;++k,++j)
+                        {
+
+                            lidarN_1.ChannelDis[k]=(float)ChannelDis_recv[j]/1000;//通道距离默认单位为毫米，转换成米
+                            if(k+8 <16)
+                                lidarN_1.ChannelDis[k+8]=(float)ChannelDis_recv[++j]/1000;
+
+                        }
+
+                        if(LidarListStatus == 0)
+                        {
+                            qLidarList.replace(cAlculationTimes,lidarN);
+                        }
+                        else if(LidarListStatus == 1)
+                        {
+                            qLidarList_extract.replace(cAlculationTimes,lidarN);
+                        }
+                        cAlculationTimes++;
+
+                        //数据归零
+                        if(cAlculationTimes>=1800)
+                        {
+                            cAlculationTimes=0;
+
+                            //修改雷达标志位
+                            if(LidarListStatus == 0)
+                            {
+
+                                LidarListStatus = 1;
+                                continue;
+                            }
+                            else if(LidarListStatus == 1)
+                            {
+                                LidarListStatus = 0;
+                                continue;
+                            }
+
+
+                        }
+
+                    }
+
+
+
+                }
+
+            }
+
+            cLidarItems.removeFirst();
+        }
+
+        qLidarItems.removeFirst();
+
+
+
+#if 0
         QString rData(ba);
+
+
         if(!rData.isEmpty())
         {
+
+
             QStringList qStrList=rData.split("ffee");
             if((qStrList.size()-1)>0)
             {
@@ -237,9 +411,11 @@ void MainWindow::ProcessLidarDataSlot()
         //调试使用
         //QString rData(ba.toHex());
         //qDebug()<<rData;
-
         //移除数据
         qLidarItems.removeFirst();
+#endif
+
+
     }
 }
 
@@ -263,14 +439,19 @@ void MainWindow::ExtractLidarMsg()
 void MainWindow::InitLidar()
 {
     //初始化
+    cAlculationTimes=0;
     LidarListStatus = 0;
     LidarListExtractStatus = -1;
+    //清除数据
+    qLidarByte.clear();
+    cLidarItems.clear();
+
     qLidarSocket = new QUdpSocket(this);
     //采用ShareAddress模式(即允许其它的服务连接到相同的地址和端口，特别是
     //用在多客户端监听同一个服务器端口等时特别有效)，和ReuseAddressHint模式(重新连接服务器)
     qLidarSocket->bind(2368,QUdpSocket::ShareAddress|QUdpSocket::ReuseAddressHint);
 
-    Li=0;
+
     //初始化
     for(int i=0;i<1800;i++)
     {
