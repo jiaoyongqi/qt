@@ -17,8 +17,8 @@
 
 typedef struct _LidarInfo
 {
-  float Azimuth;//方位角
-  float ChannelDis[16];//通道距离
+  int Azimuth;//方位角
+  int ChannelDis[16];//通道距离
 }LidarInfo;
 
 
