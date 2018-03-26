@@ -1,6 +1,8 @@
 #include "widget.h"
 #include "ui_widget.h"
 #include <qpainter.h>
+#include <QBrush>
+#include <QFile>
 
 Widget::Widget(QWidget *parent) :
     QWidget(parent),
@@ -20,10 +22,6 @@ void Widget::paintEvent(QPaintEvent *event)
 
     painter.setPen(Qt::black);
 
-    //painter.drawLine(0,0,150,500);
-
-
-
 }
 
 
@@ -31,40 +29,71 @@ void Widget::drawGrid(QPainter *painter)
 
 {
 
+    int width = 500;
+    int sum_width = 500;
+    int sum_height = 500;
+    int w = 50;
+    int h = 50;
+    int i=0,j=0,k=0;
+    int x=0,y=0;
 
+    QPen pen; //画笔
+    QBrush brush(QColor(0, 255, 0, 255)); //画刷
 
-    //painter->drawLine(0,0,500,500);
+    pen.setColor(QColor(0, 255, 0));
 
-    int Margin=40;//边缘
-
-    QRect rect;
-
-    //取得绘图区域，大小要减去旁白
-
-    //rect=QRect(Margin+300,Margin+300,width()-Margin-700,height()-Margin-500);
-
-    rect=QRect(Margin+25,Margin,width()-2*Margin-10,height()-2*Margin);
-
-    //painter->drawLine(QPoint(0, 0), QPoint(100, 100));
-
-
-    for(int i=0;i<=10;i++)
-
+    for(i=0;i<=sum_width;i=i+w)
     {
+        painter->drawLine(i,0,i,width);
+    }
 
-        int x=rect.left()+(i*(rect.width()-1)/10);
-        painter->drawLine(x,rect.top(),x,rect.bottom());
+
+    for(j=0;j<=sum_height;j=j+h)
+    {
+        painter->drawLine(0,j,sum_height,j);
 
     }
 
 
-    for(int j=0;j<=10;j++)
-
+    QFile file("/home/feng/Documents/test/Grid/text.txt");
+    if(file.open(QIODevice::ReadOnly))
     {
 
-        int y=rect.bottom()-(j*(rect.height()-1)/10);
-        painter->drawLine(rect.left()-5,y,rect.right(),y);
+        while(!file.atEnd())
+        {
+            QByteArray line = file.readLine();
+            QString str(line);//"0,50\r\n"
+            //qDebug("%s",str);
+            j=0,k=0;
+            for(i=0;i<str.length();i++)
+            {
+                if(str.at(i)==',')
+                    j=i;
+                if(str.at(i)=='\r')
+                    k=i;
+            }
+            qDebug("j=%d,k=%d",j,k);
+
+            x = str.mid(0,j).toInt();
+            y = str.mid(j+1,k).toInt();
+            qDebug("x=%d,y=%d",x,y);
+
+        }
+
+
     }
+    else
+    {
+        qDebug("Can't open the file!");
+    }
+
+
+
+
+
+    painter->setPen(pen); //添加画笔
+    painter->setBrush(brush);
+    painter->drawRect(50, 0, 50, 50);//x,y,length,length
 
 }
 
