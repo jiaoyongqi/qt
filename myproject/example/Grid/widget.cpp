@@ -39,12 +39,14 @@ void Widget::drawGrid(QPainter *painter)
 
     QPen pen; //画笔
     QBrush brush(QColor(0, 255, 0, 255)); //画刷
+    painter->setPen(pen); //添加画笔
+    painter->setBrush(brush);
 
     pen.setColor(QColor(0, 255, 0));
 
     for(i=0;i<=sum_width;i=i+w)
     {
-        painter->drawLine(i,0,i,width);
+        painter->drawLine(i,0,i,width);//x1,y1,x2,y2
     }
 
 
@@ -72,11 +74,16 @@ void Widget::drawGrid(QPainter *painter)
                 if(str.at(i)=='\r')
                     k=i;
             }
-            qDebug("j=%d,k=%d",j,k);
+            //qDebug("j=%d,k=%d",j,k);
 
             x = str.mid(0,j).toInt();
             y = str.mid(j+1,k).toInt();
             qDebug("x=%d,y=%d",x,y);
+
+            //huizhi wangge
+
+            painter->drawRect(x, y, w, h);//x,y,length,length
+
 
         }
 
@@ -91,9 +98,6 @@ void Widget::drawGrid(QPainter *painter)
 
 
 
-    painter->setPen(pen); //添加画笔
-    painter->setBrush(brush);
-    painter->drawRect(50, 0, 50, 50);//x,y,length,length
 
 }
 
