@@ -95,6 +95,44 @@ void Widget::drawGrid(QPainter *painter)
     }
 
 
+    file.close();
+
+
+
+    QString strx;
+    QString stry;
+
+    int x_test=0,y_test=100;
+    strx.setNum(x_test);
+    stry.setNum(y_test);
+    QString content = strx + "," + stry +"\n";
+
+
+    //write file
+    QFile writefile("/home/feng/Documents/test/Grid/writetext.txt");
+    if(!writefile.open(QIODevice::WriteOnly|QIODevice::Append)){
+        qDebug("writefile打开失败");
+    }else{
+        qDebug("writefile打开成功");
+        //获得文件大小
+        qint64 pos;
+        pos = writefile.size();
+        //重新定位文件输入位置，这里是定位到文件尾端
+        writefile.seek(pos);
+        QString content1 = "0,50\n";
+        //写入文件
+        qint64 length = -1;
+        length = writefile.write(content.toLatin1(),content.length());
+        if(length == -1){
+            qDebug("写入文件失败");
+        }else{
+            qDebug("写入文件成功");
+        }
+
+
+
+    }
+    writefile.close();
 
 
 
